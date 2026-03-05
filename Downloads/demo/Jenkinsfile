@@ -1,0 +1,169 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Checkout Code') {
+            steps {
+                echo '📥 Checking out code from repository...'
+                git 'https://github.com/Rahulbgs06/SpringApp_Api_Testing.git'
+            }
+            post {
+                success {
+                    echo '✅ Checkout completed successfully!'
+                }
+            }
+        }
+        
+        stage('Maven Build') {
+            steps {
+                echo '🔨 Building application with Maven...'
+                sh '''
+                    ./mvnw clean package -DskipTests
+                '''
+            }
+            post {
+                success {
+                    echo '✅ Maven build completed successfully!'
+                }
+            }
+        }
+        
+        stage('Docker Cleanup') {
+            steps {
+                echo '🧹 Cleaning up old containers...'
+                sh '''
+                    docker-compose down -v || true
+                    echo "Old containers removed"
+                '''
+            }
+            post {
+                success {
+                    echo '✅ Docker cleanup completed successfully!'
+                }
+            }
+        }
+        
+        stage('Start MySQL') {
+            steps {
+                echo '🐬 Starting MySQL container...'
+                sh '''
+                    docker-compose up -d mysql
+                    echo "Waiting for MySQL to be ready (20 seconds)..."
+                    sleep 15
+                '''
+            }
+            post {
+                success {
+                    echo '✅ MySQL started successfully!'
+                }
+            }
+        }
+        
+        stage('Start Spring Boot') {
+            steps {
+                echo '🚀 Starting Spring Boot application...'
+                sh '''
+                    docker-compose up -d --build springboot
+                    echo "Waiting for application to start (15 seconds)..."
+                    sleep 5
+                '''
+            }
+            post {
+                success {
+                    echo '✅ Spring Boot started successfully!'
+                }
+            }
+        }
+        
+        stage('Check Application Logs') {
+            steps {
+                echo '📋 Checking Spring Boot logs...'
+                sh '''
+                    echo "=== Last 30 lines of Spring Boot logs ==="
+                    docker-compose logs -f --tail=30 springboot
+                '''
+            }
+            post {
+                success {
+                    echo '✅ Logs checked successfully!'
+                }
+            }
+        }
+        
+        stage('Run API Tests') {
+            steps {
+                echo '🧪 Running API test script...'
+                sh '''
+                    echo "Making test script executable..."
+                    chmod +x api_test.sh
+                    
+                    echo "=================================="
+                    echo "Starting API Tests"
+                    echo "=================================="
+                    
+                    # Run the test script
+                    ./api_test.sh
+                    
+                    echo "=================================="
+                    echo "API Tests Completed"
+                    echo "=================================="
+                '''
+            }
+            post {
+                success {
+                    echo '✅ All API tests passed successfully!'
+                }
+                failure {
+                    echo '❌ Some API tests failed!'
+                }
+            }
+        }
+        
+        stage('Final Container Status') {
+            steps {
+                echo '📊 Checking final container status...'
+                sh '''
+                    echo "=== Running Containers ==="
+                    docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+                    
+                    echo "\\n=== Final Spring Boot Logs ==="
+                    docker-compose logs -f --tail=20 springboot
+                '''
+            }
+            post {
+                success {
+                    echo '✅ All containers are running properly!'
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '''
+            ╔══════════════════════════════════════════════════╗
+            ║   ✅✅✅ PIPELINE EXECUTED SUCCESSFULLY! ✅✅✅   ║
+            ║      All stages completed without errors         ║
+            ╚══════════════════════════════════════════════════╝
+            '''
+        }
+        failure {
+            echo '''
+            ╔══════════════════════════════════════════════════╗
+            ║   ❌❌❌ PIPELINE FAILED! ❌❌❌                    ║
+            ║      Check logs above for errors                 ║
+            ╚══════════════════════════════════════════════════╝
+            '''
+            sh '''
+                echo "=== Debugging Information ==="
+                echo "Container Status:"
+                docker ps -a
+                echo "\\nSpring Boot Error Logs:"
+                docker-compose logs --tail=50 springboot
+            '''
+        }
+        always {
+            echo '🏁 Pipeline execution finished.'
+        }
+    }
+}
