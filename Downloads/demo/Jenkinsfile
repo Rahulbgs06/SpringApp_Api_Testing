@@ -106,7 +106,7 @@ pipeline {
                 dir('Downloads/demo') {
                     sh '''
                         echo "Making test script executable..."
-                        chmod +x jenkins-test.sh
+                        chmod +X jenkins-test.sh
                         
                         echo "=================================="
                         echo "Starting API Tests"
