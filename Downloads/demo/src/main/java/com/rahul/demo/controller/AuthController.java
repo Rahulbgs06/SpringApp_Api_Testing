@@ -16,7 +16,7 @@ import java.util.*;
 
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/auth") //static url
 public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
