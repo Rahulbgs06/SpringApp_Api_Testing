@@ -17,9 +17,11 @@ pipeline {
         stage('Maven Build') {
             steps {
                 echo '🔨 Building application with Maven...'
-                sh '''
-                    ./mvnw clean package -DskipTests
-                '''
+                dir('Downloads/demo') {
+                    sh '''
+                        ./mvnw clean package -DskipTests
+                    '''
+                }
             }
             post {
                 success {
@@ -31,10 +33,12 @@ pipeline {
         stage('Docker Cleanup') {
             steps {
                 echo '🧹 Cleaning up old containers...'
-                sh '''
-                    docker-compose down -v || true
-                    echo "Old containers removed"
-                '''
+                dir('Downloads/demo') {
+                    sh '''
+                        docker-compose down -v || true
+                        echo "Old containers removed"
+                    '''
+                }
             }
             post {
                 success {
@@ -46,11 +50,13 @@ pipeline {
         stage('Start MySQL') {
             steps {
                 echo '🐬 Starting MySQL container...'
-                sh '''
-                    docker-compose up -d mysql
-                    echo "Waiting for MySQL to be ready (20 seconds)..."
-                    sleep 15
-                '''
+                dir('Downloads/demo') {
+                    sh '''
+                        docker-compose up -d mysql
+                        echo "Waiting for MySQL to be ready (20 seconds)..."
+                        sleep 15
+                    '''
+                }
             }
             post {
                 success {
@@ -62,11 +68,13 @@ pipeline {
         stage('Start Spring Boot') {
             steps {
                 echo '🚀 Starting Spring Boot application...'
-                sh '''
-                    docker-compose up -d --build springboot
-                    echo "Waiting for application to start (15 seconds)..."
-                    sleep 5
-                '''
+                dir('Downloads/demo') {
+                    sh '''
+                        docker-compose up -d --build springboot
+                        echo "Waiting for application to start (15 seconds)..."
+                        sleep 5
+                    '''
+                }
             }
             post {
                 success {
@@ -78,10 +86,12 @@ pipeline {
         stage('Check Application Logs') {
             steps {
                 echo '📋 Checking Spring Boot logs...'
-                sh '''
-                    echo "=== Last 30 lines of Spring Boot logs ==="
-                    docker-compose logs -f --tail=30 springboot
-                '''
+                dir('Downloads/demo') {
+                    sh '''
+                        echo "=== Last 30 lines of Spring Boot logs ==="
+                        docker-compose logs --tail=30 springboot
+                    '''
+                }
             }
             post {
                 success {
@@ -93,21 +103,23 @@ pipeline {
         stage('Run API Tests') {
             steps {
                 echo '🧪 Running API test script...'
-                sh '''
-                    echo "Making test script executable..."
-                    chmod +x api_test.sh
-                    
-                    echo "=================================="
-                    echo "Starting API Tests"
-                    echo "=================================="
-                    
-                    # Run the test script
-                    ./api_test.sh
-                    
-                    echo "=================================="
-                    echo "API Tests Completed"
-                    echo "=================================="
-                '''
+                dir('Downloads/demo') {
+                    sh '''
+                        echo "Making test script executable..."
+                        chmod +x api_test.sh
+                        
+                        echo "=================================="
+                        echo "Starting API Tests"
+                        echo "=================================="
+                        
+                        # Run the test script
+                        ./api_test.sh
+                        
+                        echo "=================================="
+                        echo "API Tests Completed"
+                        echo "=================================="
+                    '''
+                }
             }
             post {
                 success {
@@ -122,13 +134,15 @@ pipeline {
         stage('Final Container Status') {
             steps {
                 echo '📊 Checking final container status...'
-                sh '''
-                    echo "=== Running Containers ==="
-                    docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-                    
-                    echo "\\n=== Final Spring Boot Logs ==="
-                    docker-compose logs -f --tail=20 springboot
-                '''
+                dir('Downloads/demo') {
+                    sh '''
+                        echo "=== Running Containers ==="
+                        docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+                        
+                        echo "\\n=== Final Spring Boot Logs ==="
+                        docker-compose logs --tail=20 springboot
+                    '''
+                }
             }
             post {
                 success {
@@ -154,13 +168,15 @@ pipeline {
             ║      Check logs above for errors                 ║
             ╚══════════════════════════════════════════════════╝
             '''
-            sh '''
-                echo "=== Debugging Information ==="
-                echo "Container Status:"
-                docker ps -a
-                echo "\\nSpring Boot Error Logs:"
-                docker-compose logs --tail=50 springboot
-            '''
+            dir('Downloads/demo') {
+                sh '''
+                    echo "=== Debugging Information ==="
+                    echo "Container Status:"
+                    docker ps -a
+                    echo "\\nSpring Boot Error Logs:"
+                    docker-compose logs --tail=50 springboot
+                '''
+            }
         }
         always {
             echo '🏁 Pipeline execution finished.'
